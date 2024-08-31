@@ -27,8 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.modifier.modifierLocalConsumer
-import androidx.compose.ui.semantics.Role.Companion.RadioButton
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -42,132 +40,161 @@ import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_RED_DISABLED
 import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_RED_SELECTED
 import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_YELLOW_DISABLED
 import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_YELLOW_SELECTED
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import com.gabriel.listatarecompose.data.TarefaDao
+import com.gabriel.listatarecompose.model.Tarefa
+import com.gabriel.listatarecompose.ui.theme.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun SalvarTarefa(
-    navController: NavController
-){
-    Scaffold (
+    navController: NavController,
+    tarefaDao: TarefaDao,
+    tarefaId: Int? = null // Parâmetro opcional para o ID da tarefa
+) {
+    // Estados para armazenar os dados da tarefa
+    var tituloTarefa by remember { mutableStateOf("") }
+    var descricaoTarefa by remember { mutableStateOf("") }
+    var prioridadeSelecionada by remember { mutableStateOf(Prioridade.MEDIA) } // Valor padrão como Média
+
+    // LaunchedEffect para carregar os dados da tarefa existente, se houver
+    LaunchedEffect(tarefaId) {
+        tarefaId?.let { id ->
+            val tarefaExistente = tarefaDao.getTarefaById(id)
+            tarefaExistente?.let { tarefa ->
+                tituloTarefa = tarefa.tarefa ?: ""
+                descricaoTarefa = tarefa.descricao ?: ""
+                prioridadeSelecionada = when (tarefa.prioridade) {
+                    1 -> Prioridade.BAIXA
+                    2 -> Prioridade.MEDIA
+                    3 -> Prioridade.ALTA
+                    else -> Prioridade.MEDIA
+                }
+            }
+        }
+    }
+
+    Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "Salvar Tarefas",
-                        style = TextStyle(
-                            fontSize = 18.sp,
+                        text = if (tarefaId != null) "Editar Tarefa" else "Nova Tarefa",
+                        style = TextStyle(fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                            color = Color.White)
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = androidx.compose.ui.graphics.Color.Magenta // Cor do fundo do top bar
+                    containerColor = Color.Magenta
                 )
             )
         }
-
-
     ) {
-        var tituloTarefa by remember {
-            mutableStateOf("")
-        }
-
-        var descricaoTarefa by remember {
-            mutableStateOf("")
-        }
-
-        var semPrioridadeTarefa by remember {
-            mutableStateOf(false)
-        }
-        var prioridadeBaixaTarefa by remember {
-            mutableStateOf(false)
-        }
-        var prioridadeMediaTarefa by remember {
-            mutableStateOf(false)
-        }
-        var prioridadeAltaTarefa by remember {
-            mutableStateOf(false)
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(52.dp)) // Adicionei um Spacer de 16dp
+            Spacer(Modifier.height(52.dp))
             CaixaDeTexto(
                 value = tituloTarefa,
-                onValueChange ={
-                    tituloTarefa = it
-                },
+                onValueChange = { tituloTarefa = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(20.dp, 20.dp, 20.dp, 0.dp),
-                label ="Titulo Tarefa",
+                label = "Título Tarefa",
                 maxLines = 1,
                 keyboardType = KeyboardType.Text
             )
             CaixaDeTexto(
                 value = descricaoTarefa,
-                onValueChange ={
-                    descricaoTarefa = it
-                },
+                onValueChange = { descricaoTarefa = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
                     .padding(20.dp, 22.dp, 20.dp, 0.dp),
-                label ="Descrição",
+                label = "Descrição",
                 maxLines = 5,
                 keyboardType = KeyboardType.Text
             )
-            Row (verticalAlignment = Alignment.CenterVertically,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-
-
-                Text(text = "Nivel de prioridade")
-
                 RadioButton(
-                    selected = prioridadeBaixaTarefa,
-                    onClick = {
-                        prioridadeBaixaTarefa = !prioridadeBaixaTarefa
-                    },
+                    selected = prioridadeSelecionada == Prioridade.BAIXA,
+                    onClick = { prioridadeSelecionada = Prioridade.BAIXA },
                     colors = RadioButtonDefaults.colors(
                         unselectedColor = RADIO_BUTTON_GREEN_DISABLED,
                         selectedColor = RADIO_BUTTON_GREEN_SELECTED
                     )
                 )
+                Text(text = "Baixa")
+
                 RadioButton(
-                    selected = prioridadeMediaTarefa,
-                    onClick = {
-                        prioridadeMediaTarefa = !prioridadeMediaTarefa
-                    },
+                    selected = prioridadeSelecionada == Prioridade.MEDIA,
+                    onClick = { prioridadeSelecionada = Prioridade.MEDIA },
                     colors = RadioButtonDefaults.colors(
                         unselectedColor = RADIO_BUTTON_YELLOW_DISABLED,
                         selectedColor = RADIO_BUTTON_YELLOW_SELECTED
                     )
                 )
+                Text(text = "Média")
+
                 RadioButton(
-                    selected = prioridadeAltaTarefa,
-                    onClick = {
-                        prioridadeAltaTarefa = !prioridadeAltaTarefa
-                    },
+                    selected = prioridadeSelecionada == Prioridade.ALTA,
+                    onClick = { prioridadeSelecionada = Prioridade.ALTA },
                     colors = RadioButtonDefaults.colors(
                         unselectedColor = RADIO_BUTTON_RED_DISABLED,
                         selectedColor = RADIO_BUTTON_RED_SELECTED
                     )
                 )
-
+                Text(text = "Alta")
             }
-                Botao(onClick = {},
-                    modifier = Modifier.fillMaxWidth().height(80.dp).padding(20.dp),
-                    texto = "Salvar" )
+            Botao(onClick = {
+                // Verifique se os campos estão preenchidos e se a prioridade está selecionada
+                if (tituloTarefa.isNotBlank() && descricaoTarefa.isNotBlank() && prioridadeSelecionada != null) {
+                    val novaTarefa = Tarefa(
+                        id = tarefaId ?: 0, // Manter o ID da tarefa se existir
+                        tarefa = tituloTarefa,
+                        descricao = descricaoTarefa,
+                        prioridade = when (prioridadeSelecionada) {
+                            Prioridade.BAIXA -> 1
+                            Prioridade.MEDIA -> 2
+                            Prioridade.ALTA -> 3
+                            else -> 2 // Prioridade média como padrão
+                        }
+                    )
 
-            }
-
+                    // Usar corrotina para realizar operações de banco de dados
+                    CoroutineScope(Dispatchers.IO).launch {
+                        if (tarefaId == null) {
+                            tarefaDao.insert(novaTarefa) // Inserir nova tarefa
+                        } else {
+                            tarefaDao.update(novaTarefa) // Atualizar tarefa existente
+                        }
+                    }
+                    // Navegar de volta para a lista de tarefas após salvar
+                    navController.popBackStack()
+                }
+            },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .padding(20.dp),
+                texto = "Salvar"
+            )
         }
     }
-
+}
+enum class Prioridade {
+    BAIXA, MEDIA, ALTA
+}

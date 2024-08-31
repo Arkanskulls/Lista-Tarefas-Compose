@@ -1,7 +1,7 @@
 package com.gabriel.listatarecompose.itemDeLista
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -24,7 +23,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.gabriel.listatarecompose.R
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gabriel.listatarecompose.model.Tarefa
@@ -35,39 +33,42 @@ import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_YELLOW_SELECTED
 @Composable
 fun TarefaItem(
     position: Int,
-    listaTarefas: MutableList<Tarefa>
+    tarefa: Tarefa,
+    onDelete: (Tarefa) -> Unit, // Função de callback para deletar a tarefa
+    onClick: () -> Unit // Função de callback para clicar na tarefa
 ) {
-    val tituloTarefa = listaTarefas[position].tarefa
-    val descricaoTarefa = listaTarefas[position].descricao
-    val prioridade = listaTarefas[position].prioridade
+    val tituloTarefa = tarefa.tarefa ?: "Título não disponível"
+    val descricaoTarefa = tarefa.descricao ?: "Descrição não disponível"
+    val prioridade = tarefa.prioridade
 
-    val nivelDePrioridade: String = when(prioridade){
-        0 -> "SEM PRIORIDADE"
+    val nivelDePrioridade: String = when (prioridade) {
         1 -> "PRIORIDADE BAIXA"
         2 -> "PRIORIDADE MÉDIA"
-        else -> "PRIORIDADE ALTA"
+        3 -> "PRIORIDADE ALTA"
+        else -> "SEM PRIORIDADE"
     }
 
-    val color = when(prioridade){
-        0 -> Color.Gray
+    val color = when (prioridade) {
         1 -> RADIO_BUTTON_GREEN_SELECTED
         2 -> RADIO_BUTTON_YELLOW_SELECTED
-        else -> RADIO_BUTTON_RED_SELECTED
+        3 -> RADIO_BUTTON_RED_SELECTED
+        else -> Color.Gray
     }
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = Color.White // Cor de fundo do Card
+            containerColor = Color.White
         ),
         modifier = Modifier
             .fillMaxWidth()
             .padding(10.dp)
+            .clickable { onClick() } // Adiciona a funcionalidade de clique
     ) {
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
             Text(
-                text = tituloTarefa.toString(),
+                text = tituloTarefa,
                 color = Color.Black,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
@@ -75,7 +76,7 @@ fun TarefaItem(
                     .padding(bottom = 4.dp)
             )
             Text(
-                text = descricaoTarefa.toString(),
+                text = descricaoTarefa,
                 color = Color.Black,
                 fontSize = 14.sp,
                 modifier = Modifier
@@ -98,7 +99,7 @@ fun TarefaItem(
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(
-                    onClick = { /* Ação ao clicar no botão */ },
+                    onClick = { onDelete(tarefa) }, // Chama a função onDelete ao clicar na lixeira
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_delete),
@@ -110,7 +111,6 @@ fun TarefaItem(
         }
     }
 }
-
 /*@Preview(showBackground = true)
 @Composable
 fun TarefaItemPreview() {
