@@ -2,6 +2,7 @@ package com.gabriel.listatarecompose.view
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -19,6 +20,7 @@ import com.gabriel.listatarecompose.R
 import com.gabriel.listatarecompose.itemDeLista.TarefaItem
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.gabriel.listatarecompose.data.TarefaDao
 import com.gabriel.listatarecompose.model.Tarefa
 import kotlinx.coroutines.launch
@@ -56,7 +58,7 @@ tarefaDao: TarefaDao // Passando o TarefaDao como parâmetro
             }
         },
         containerColor = Color.Black // Cor do fundo da aplicação
-    ) {
+    ) { paddingValues -> // Recebe os valores de padding do Scaffold
         val listaTarefas = remember { mutableStateListOf<Tarefa>() }
         val coroutineScope = rememberCoroutineScope() // Cria um escopo de corrotina para operações assíncronas
 
@@ -68,7 +70,13 @@ tarefaDao: TarefaDao // Passando o TarefaDao como parâmetro
             }
         }
 
-        LazyColumn {
+        // LazyColumn com padding para evitar sobreposição com a TopAppBar
+        LazyColumn(
+            contentPadding = PaddingValues(
+                top = paddingValues.calculateTopPadding(), // Adiciona o padding correto no topo
+                bottom = 16.dp // Espaço adicional no final para o FAB não sobrepor as tarefas
+            )
+        ) {
             itemsIndexed(listaTarefas) { position, tarefa ->
                 TarefaItem(
                     position = position,
