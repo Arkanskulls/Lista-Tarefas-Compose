@@ -29,8 +29,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListaTarefas(
-navController: NavController,
-tarefaDao: TarefaDao // Passando o TarefaDao como parâmetro
+    navController: NavController,
+    tarefaDao: TarefaDao // Passando o TarefaDao como parâmetro
 ) {
     Scaffold(
         topBar = {
@@ -59,16 +59,10 @@ tarefaDao: TarefaDao // Passando o TarefaDao como parâmetro
         },
         containerColor = Color.Black // Cor do fundo da aplicação
     ) { paddingValues -> // Recebe os valores de padding do Scaffold
-        val listaTarefas = remember { mutableStateListOf<Tarefa>() }
         val coroutineScope = rememberCoroutineScope() // Cria um escopo de corrotina para operações assíncronas
 
-        // Observar o LiveData e atualizar a lista de tarefas
-        LaunchedEffect(Unit) {
-            tarefaDao.getAllTarefas().observeForever { tarefas ->
-                listaTarefas.clear()
-                listaTarefas.addAll(tarefas)
-            }
-        }
+        // Observar o Flow do banco de dados
+        val listaTarefas by tarefaDao.getAllTarefas().collectAsState(initial = emptyList()) // Coleta de Flow reativo
 
         // LazyColumn com padding para evitar sobreposição com a TopAppBar
         LazyColumn(
