@@ -75,7 +75,10 @@ dependencies {
     val nav_version = "2.7.7"
     implementation("androidx.navigation:navigation-compose:$nav_version")
     val room_version = "2.6.1"
-
+    implementation("androidx.compose.runtime:runtime-livedata:1.7.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-gif:2.7.0")
+    implementation("io.coil-kt:coil-svg:2.7.0")
     implementation("androidx.room:room-runtime:$room_version")
     //annotationProcessor("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")

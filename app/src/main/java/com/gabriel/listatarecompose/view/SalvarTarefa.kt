@@ -1,6 +1,12 @@
 package com.gabriel.listatarecompose.view
 
+
+
 import android.annotation.SuppressLint
+import android.os.Build.VERSION.SDK_INT
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,21 +40,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gabriel.listatarecompose.componentes.Botao
 import com.gabriel.listatarecompose.componentes.CaixaDeTexto
-import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_GREEN_DISABLED
-import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_GREEN_SELECTED
-import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_RED_DISABLED
-import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_RED_SELECTED
-import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_YELLOW_DISABLED
-import com.gabriel.listatarecompose.ui.theme.RADIO_BUTTON_YELLOW_SELECTED
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.decode.SvgDecoder
+import coil.disk.DiskCache
+import coil.imageLoader
+import coil.memory.MemoryCache
+import coil.request.ImageRequest
+import com.gabriel.listatarecompose.R
 import com.gabriel.listatarecompose.data.TarefaDao
 import com.gabriel.listatarecompose.model.Tarefa
-import com.gabriel.listatarecompose.ui.theme.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -62,6 +77,31 @@ fun SalvarTarefa(
     var tituloTarefa by remember { mutableStateOf("") }
     var descricaoTarefa by remember { mutableStateOf("") }
     var prioridadeSelecionada by remember { mutableStateOf(Prioridade.MEDIA) } // Valor padrão como Média
+    var imagemSelecionada by remember { mutableStateOf<String?>(null) }
+
+    // ImageLoader customizado para GIFs, cache de memória e disco
+    val context = LocalContext.current
+    val imageLoader = ImageLoader.Builder(context)
+        .memoryCache {
+            MemoryCache.Builder(context)
+                .maxSizePercent(0.25) // Cache de memória limitado a 25% do tamanho disponível
+                .build()
+        }
+        .diskCache {
+            DiskCache.Builder()
+                .directory(context.cacheDir.resolve("image_cache")) // Diretório para o cache no disco
+                .maxSizePercent(0.02) // Cache de disco limitado a 2% do espaço disponível
+                .build()
+        }
+        .components {
+            // Verifica a versão do SDK para usar o decoder correto para GIFs
+            if (SDK_INT >= 28) {
+                add(ImageDecoderDecoder.Factory())  // Usar ImageDecoder para SDK >= 28
+            } else {
+                add(GifDecoder.Factory())  // Usar GifDecoder para SDK < 28
+            }
+        }
+        .build()
 
     // LaunchedEffect para carregar os dados da tarefa existente, se houver
     LaunchedEffect(tarefaId) {
@@ -76,6 +116,7 @@ fun SalvarTarefa(
                     3 -> Prioridade.ALTA
                     else -> Prioridade.MEDIA
                 }
+                imagemSelecionada = tarefa.imagemUrl // Campo imagemUrl adicionado à entidade Tarefa
             }
         }
     }
@@ -86,9 +127,11 @@ fun SalvarTarefa(
                 title = {
                     Text(
                         text = if (tarefaId != null) "Editar Tarefa" else "Nova Tarefa",
-                        style = TextStyle(fontSize = 18.sp,
+                        style = TextStyle(
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White)
+                            color = Color.White
+                        )
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -103,6 +146,8 @@ fun SalvarTarefa(
                 .verticalScroll(rememberScrollState())
         ) {
             Spacer(Modifier.height(52.dp))
+
+            // Campos de texto
             CaixaDeTexto(
                 value = tituloTarefa,
                 onValueChange = { tituloTarefa = it },
@@ -113,6 +158,7 @@ fun SalvarTarefa(
                 maxLines = 1,
                 keyboardType = KeyboardType.Text
             )
+
             CaixaDeTexto(
                 value = descricaoTarefa,
                 onValueChange = { descricaoTarefa = it },
@@ -124,6 +170,72 @@ fun SalvarTarefa(
                 maxLines = 5,
                 keyboardType = KeyboardType.Text
             )
+
+            // Exibindo a imagem selecionada no Card da tarefa
+            imagemSelecionada?.let { imagemUrl ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(20.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Gray) // Fundo cinza para placeholder
+                ) {
+                    // Usando Coil para carregar a imagem a partir da URL, incluindo suporte a GIFs
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(imagemUrl)
+                            .placeholder(R.drawable.loading) // Placeholder durante o carregamento
+                            .error(R.drawable.error_24) // Placeholder de erro
+                            .build(),
+                        contentDescription = "Imagem da tarefa",
+                        imageLoader = imageLoader,  // Usando o ImageLoader com suporte a cache e GIF
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop // Recorta a imagem para se ajustar ao tamanho do Box
+                    )
+                }
+            }
+
+            // Quadro de imagens para seleção
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                val imagens = listOf(
+                    "https://tabulaquadrada.com.br/wp-content/uploads/card-trick-animated-gif-10.gif", // GIF externo
+                    "https://cdn.venngage.com/template/thumbnail/small/ba849fdc-1164-44ad-a42c-22df403498d4.webp", // Imagem externa
+                    R.drawable.imagem1, // Imagem local PNG
+                    R.drawable.imagem2  // Outra imagem local PNG
+                )
+
+                imagens.forEach { image ->
+                    // Verificação se a imagem é uma URL ou um recurso local
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(image)
+                            .placeholder(R.drawable.loading) // Placeholder durante o carregamento
+                            .error(R.drawable.error_24) // Placeholder de erro
+                            .build(),
+                        contentDescription = null,
+                        imageLoader = imageLoader,
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clickable {
+                                imagemSelecionada = image.toString() // Atualiza a imagem selecionada
+                            }
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.LightGray)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Botões de seleção de prioridade
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -133,8 +245,8 @@ fun SalvarTarefa(
                     selected = prioridadeSelecionada == Prioridade.BAIXA,
                     onClick = { prioridadeSelecionada = Prioridade.BAIXA },
                     colors = RadioButtonDefaults.colors(
-                        unselectedColor = RADIO_BUTTON_GREEN_DISABLED,
-                        selectedColor = RADIO_BUTTON_GREEN_SELECTED
+                        unselectedColor = Color.Green.copy(alpha = 0.6f),
+                        selectedColor = Color.Green
                     )
                 )
                 Text(text = "Baixa")
@@ -143,8 +255,8 @@ fun SalvarTarefa(
                     selected = prioridadeSelecionada == Prioridade.MEDIA,
                     onClick = { prioridadeSelecionada = Prioridade.MEDIA },
                     colors = RadioButtonDefaults.colors(
-                        unselectedColor = RADIO_BUTTON_YELLOW_DISABLED,
-                        selectedColor = RADIO_BUTTON_YELLOW_SELECTED
+                        unselectedColor = Color.Yellow.copy(alpha = 0.6f),
+                        selectedColor = Color.Yellow
                     )
                 )
                 Text(text = "Média")
@@ -153,44 +265,43 @@ fun SalvarTarefa(
                     selected = prioridadeSelecionada == Prioridade.ALTA,
                     onClick = { prioridadeSelecionada = Prioridade.ALTA },
                     colors = RadioButtonDefaults.colors(
-                        unselectedColor = RADIO_BUTTON_RED_DISABLED,
-                        selectedColor = RADIO_BUTTON_RED_SELECTED
+                        unselectedColor = Color.Red.copy(alpha = 0.6f),
+                        selectedColor = Color.Red
                     )
                 )
                 Text(text = "Alta")
             }
+
+            // Botão de salvar tarefa
             Botao(onClick = {
-                // Verifique se os campos estão preenchidos e se a prioridade está selecionada
-                if (tituloTarefa.isNotBlank() && descricaoTarefa.isNotBlank() && prioridadeSelecionada != null) {
+                if (tituloTarefa.isNotBlank() && descricaoTarefa.isNotBlank()) {
                     val novaTarefa = Tarefa(
-                        id = tarefaId ?: 0, // Manter o ID da tarefa se existir
+                        id = tarefaId ?: 0,
                         tarefa = tituloTarefa,
                         descricao = descricaoTarefa,
                         prioridade = when (prioridadeSelecionada) {
                             Prioridade.BAIXA -> 1
                             Prioridade.MEDIA -> 2
                             Prioridade.ALTA -> 3
-                            else -> 2 // Prioridade média como padrão
-                        }
+                        },
+                        imagemUrl = imagemSelecionada // Adicionar o campo imagemUrl aqui
                     )
 
-                    // Usar corrotina para realizar operações de banco de dados
                     CoroutineScope(Dispatchers.IO).launch {
                         if (tarefaId == null) {
-                            tarefaDao.insert(novaTarefa) // Inserir nova tarefa
+                            tarefaDao.insert(novaTarefa)
                         } else {
-                            tarefaDao.update(novaTarefa) // Atualizar tarefa existente
+                            tarefaDao.update(novaTarefa)
                         }
                     }
-                    // Navegar de volta para a lista de tarefas após salvar
+
                     navController.popBackStack()
                 }
-            },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .padding(20.dp),
-                texto = "Salvar"
+            }, modifier = Modifier
+                .fillMaxWidth()
+                .height(80.dp)
+                .padding(20.dp),
+                texto = if (tarefaId != null) "Salvar Alterações" else "Criar Tarefa"
             )
         }
     }

@@ -5,9 +5,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.gabriel.listatarecompose.model.Tarefa
 
-@Database(entities = [Tarefa::class], version = 1, exportSchema = false)
+@Database(entities = [Tarefa::class], version = 2, exportSchema = false)
 abstract class TarefaDatabase : RoomDatabase() {
-    abstract fun tarefaDao(): TarefaDao // Método para acessar o TarefaDao
+    abstract fun tarefaDao(): TarefaDao
 
     companion object {
         @Volatile
@@ -19,7 +19,9 @@ abstract class TarefaDatabase : RoomDatabase() {
                     context.applicationContext,
                     TarefaDatabase::class.java,
                     "tarefa_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration() // Para migrar sem precisar escrever um migrador
+                    .build()
                 INSTANCE = instance
                 instance
             }

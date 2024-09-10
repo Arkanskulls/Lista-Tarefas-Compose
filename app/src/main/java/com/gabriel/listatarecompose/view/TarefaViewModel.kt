@@ -6,13 +6,14 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.gabriel.listatarecompose.data.TarefaDao
 import com.gabriel.listatarecompose.model.Tarefa
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 
 class TarefaViewModel(private val tarefaDao: TarefaDao) : ViewModel() {
 
     // Convertendo Flow para LiveData usando asLiveData
-    val todasTarefas: LiveData<List<Tarefa>> = tarefaDao.getAllTarefas().asLiveData()
+    val todasTarefas: Flow<List<Tarefa>> = tarefaDao.getAllTarefas()
 
     // Função para carregar tarefas (opcional, se você precisar de lógica adicional)
     fun carregarTarefas() {
