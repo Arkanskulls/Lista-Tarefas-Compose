@@ -77,7 +77,7 @@ fun SalvarTarefa(
     var tituloTarefa by remember { mutableStateOf("") }
     var descricaoTarefa by remember { mutableStateOf("") }
     var prioridadeSelecionada by remember { mutableStateOf(Prioridade.MEDIA) } // Valor padrão como Média
-    var imagemSelecionada by remember { mutableStateOf<String?>(null) }
+    var imagemSelecionada by remember { mutableStateOf<Any?>(null) } // Estado para armazenar qualquer tipo de imagem (URL ou recurso local)
 
     // ImageLoader customizado para GIFs, cache de memória e disco
     val context = LocalContext.current
@@ -116,7 +116,7 @@ fun SalvarTarefa(
                     3 -> Prioridade.ALTA
                     else -> Prioridade.MEDIA
                 }
-                imagemSelecionada = tarefa.imagemUrl // Campo imagemUrl adicionado à entidade Tarefa
+                imagemSelecionada = tarefa.imagemUrl // Carregando a imagem da tarefa existente
             }
         }
     }
@@ -172,7 +172,7 @@ fun SalvarTarefa(
             )
 
             // Exibindo a imagem selecionada no Card da tarefa
-            imagemSelecionada?.let { imagemUrl ->
+            imagemSelecionada?.let { imagem ->
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -181,15 +181,28 @@ fun SalvarTarefa(
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.Gray) // Fundo cinza para placeholder
                 ) {
-                    // Usando Coil para carregar a imagem a partir da URL, incluindo suporte a GIFs
+                    // Verifica se a imagem é uma URL ou um recurso local
+                    val imageRequest = if (imagem is String) {
+                        // Imagem é uma URL
+                        ImageRequest.Builder(context)
+                            .data(imagem)
+                            .placeholder(R.drawable.loading)
+                            .error(R.drawable.error_24)
+                            .build()
+                    } else {
+                        // Imagem é um recurso local
+                        ImageRequest.Builder(context)
+                            .data(imagem as Int)
+                            .placeholder(R.drawable.loading)
+                            .error(R.drawable.error_24)
+                            .build()
+                    }
+
+                    // Usando Coil para carregar a imagem
                     AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(imagemUrl)
-                            .placeholder(R.drawable.loading) // Placeholder durante o carregamento
-                            .error(R.drawable.error_24) // Placeholder de erro
-                            .build(),
+                        model = imageRequest,
                         contentDescription = "Imagem da tarefa",
-                        imageLoader = imageLoader,  // Usando o ImageLoader com suporte a cache e GIF
+                        imageLoader = imageLoader,
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(8.dp)),
@@ -217,15 +230,15 @@ fun SalvarTarefa(
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(image)
-                            .placeholder(R.drawable.loading) // Placeholder durante o carregamento
-                            .error(R.drawable.error_24) // Placeholder de erro
+                            .placeholder(R.drawable.loading)
+                            .error(R.drawable.error_24)
                             .build(),
                         contentDescription = null,
                         imageLoader = imageLoader,
                         modifier = Modifier
                             .size(60.dp)
                             .clickable {
-                                imagemSelecionada = image.toString() // Atualiza a imagem selecionada
+                                imagemSelecionada = image // Atualiza a imagem selecionada, seja URL ou recurso local
                             }
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.LightGray)
@@ -284,7 +297,7 @@ fun SalvarTarefa(
                             Prioridade.MEDIA -> 2
                             Prioridade.ALTA -> 3
                         },
-                        imagemUrl = imagemSelecionada // Adicionar o campo imagemUrl aqui
+                        imagemUrl = imagemSelecionada?.toString() // Armazena a URL ou recurso local como string
                     )
 
                     CoroutineScope(Dispatchers.IO).launch {
